@@ -2,64 +2,19 @@ import streamlit as st
 from PIL import Image
 from ultralytics import YOLO
 import numpy as np
+import cv2
 
-# Load the pre-trained YOLO model
-model = YOLO('model.pt')  # Load the trained model weights
+# Load the YOLO model for spot detection
+spot_model = YOLO('path_to_spot_detection_model.pt')  # Replace with your spot detection model
+# Load the YOLO model for disease classification
+disease_model = YOLO('yolov8n.pt')  # Initialize the YOLO model for disease classification
 
 # Application title and description
 st.title("Tomato Leaf Disease Detection")
 st.markdown("""
-*This web application detects common diseases in tomato leaves using the YOLO (You Only Look Once) object detection model. The model was trained on a dataset that includes various classes of tomato leaf diseases. The classes are:
+*This web application detects common diseases in tomato leaves. It first identifies spots on the leaves and then classifies the type of disease based on these spots. The classes are:
 Bacterial Spot, Early Blight, Healthy, Iron Deficiency, Late Blight, Leaf Mold, Leaf Miner, Mosaic Virus, Septoria, Spider Mites, Yellow Leaf Curl Virus.*
 """)
-
-# Dictionary for disease descriptions and remedies
-disease_info = {
-    "Bacterial Spot": {
-        "description": "Bacterial spot is a bacterial disease that affects tomato plants, causing spots on leaves, stems, and fruits.",
-        "remedy": "Remove infected plants, avoid overhead watering, and use copper-based fungicides."
-    },
-    "Early Blight": {
-        "description": "Early blight is a fungal disease that causes concentric rings on leaves, leading to yellowing and defoliation.",
-        "remedy": "Remove affected leaves, rotate crops, and use fungicides."
-    },
-    "Healthy": {
-        "description": "The leaf is healthy with no signs of disease.",
-        "remedy": "No action needed. Continue proper care and monitoring."
-    },
-    "Iron Deficiency": {
-        "description": "Iron deficiency causes yellowing between the veins of young leaves.",
-        "remedy": "Use iron chelate foliar sprays and improve soil pH."
-    },
-    "Late Blight": {
-        "description": "Late blight is a serious disease that causes dark spots on leaves and fruit, leading to rot.",
-        "remedy": "Remove infected plants, avoid wet foliage, and apply fungicides."
-    },
-    "Leaf Mold": {
-        "description": "Leaf mold causes yellow spots on the upper side of leaves and a moldy growth on the underside.",
-        "remedy": "Improve air circulation, reduce humidity, and use fungicides."
-    },
-    "Leaf Miner": {
-        "description": "Leaf miners are insect larvae that tunnel through leaves, creating winding, white trails.",
-        "remedy": "Remove and destroy affected leaves, use insecticides, and introduce natural predators."
-    },
-    "Mosaic Virus": {
-        "description": "Mosaic virus causes mottled, discolored leaves and stunted plant growth.",
-        "remedy": "Remove infected plants, control aphids, and use resistant varieties."
-    },
-    "Septoria": {
-        "description": "Septoria leaf spot causes small, circular spots on leaves, leading to yellowing and defoliation.",
-        "remedy": "Remove affected leaves, avoid overhead watering, and use fungicides."
-    },
-    "Spider Mites": {
-        "description": "Spider mites cause tiny yellow spots on leaves and fine webbing, leading to leaf drop.",
-        "remedy": "Spray with water to remove mites, use insecticidal soap, and introduce natural predators."
-    },
-    "Yellow Leaf Curl Virus": {
-        "description": "Yellow leaf curl virus causes yellowing and curling of leaves, and stunted plant growth.",
-        "remedy": "Remove infected plants, control whiteflies, and use resistant varieties."
-    }
-}
 
 # File uploader for tomato leaf images
 uploaded_file = st.file_uploader("Choose a tomato leaf image", type=["jpg", "png"])
@@ -69,34 +24,28 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     image_array = np.array(image)
 
-    # Predict classes
-    results = model.predict(image_array, save=True)  # Ensure the prediction is made and saved
-    
-    # Check if any results are found
-    if results:
-        # Save and display the results
-        for r in results:
-            im_array = r.plot()  # plot a BGR numpy array of predictions
-            im = Image.fromarray(im_array[..., ::-1])  # Convert to RGB PIL image
-            im.save('results.jpg')  # Save the image
-        
-        st.image('results.jpg', caption='Model Prediction')
-        
-        # Extract detected classes
-        detected_classes = set([model.names[int(box.cls)] for r in results for box in r.boxes])
-        st.write("### Disease Information and Remedies:")
-        if "Healthy" in detected_classes:
-            st.write("**Healthy**")
-            st.write(f"*Description:* {disease_info['Healthy']['description']}")
-            st.write(f"*Remedy:* {disease_info['Healthy']['remedy']}")
-        else:
-            for disease in detected_classes:
-                if disease in disease_info:
-                    st.write(f"**{disease}**")
-                    st.write(f"*Description:* {disease_info[disease]['description']}")
-                    st.write(f"*Remedy:* {disease_info[disease]['remedy']}")
-    else:
-        st.write("No diseases detected in the image.")
+    # Step 1: Spot Detection
+    spot_results = spot_model(image_array)
+    spot_image_array = spot_results[0].plot()  # Get spots highlighted in the image
+    spot_image = Image.fromarray(spot_image_array[..., ::-1])  # Convert to RGB PIL image
+    spot_image.save('spots.jpg')  # Save the image with spots highlighted
+
+    st.image('spots.jpg', caption='Detected Spots')
+
+    # Step 2: Disease Classification
+    # To classify the detected spots, we need to process them individually
+    # Here we assume spots are detected and bounding boxes are provided
+    st.markdown("### Detected Spots and Their Diseases")
+    for box in spot_results[0].boxes:
+        x1, y1, x2, y2 = map(int, box.xyxy.numpy()[0])  # Bounding box coordinates
+        spot_image_crop = image_array[y1:y2, x1:x2]  # Crop the spot from the image
+
+        # Predict disease based on the cropped spot
+        spot_disease_results = disease_model(spot_image_crop)
+        for spot_box in spot_disease_results[0].boxes:
+            cls = spot_box.cls.numpy()[0]  # Class
+            conf = spot_box.conf.numpy()[0]  # Confidence
+            st.write(f"Spot Class: {disease_model.names[int(cls)]}, Confidence: {conf:.2f}")
 
 # Custom CSS for a polished look
 st.markdown(

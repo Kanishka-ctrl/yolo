@@ -16,12 +16,6 @@ Bacterial Spot, Early Blight, Healthy, Iron Deficiency, Late Blight, Leaf Mold, 
 # File uploader for tomato leaf images
 uploaded_file = st.file_uploader("Choose a tomato leaf image", type=["jpg", "png"])
 
-# Sidebar for additional information
-st.sidebar.markdown("## About")
-st.sidebar.markdown("GitHub: [Tomato Leaf Disease Detection](https://github.com/your-repo-url)")
-st.sidebar.markdown("LinkedIn: [Your LinkedIn](https://www.linkedin.com/your-profile)")
-st.sidebar.markdown("## More Information")
-st.sidebar.markdown("[GitHub Repository](https://github.com/your-repo-url)")
 
 # Process the uploaded image
 if uploaded_file is not None:

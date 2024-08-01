@@ -1,10 +1,12 @@
 import streamlit as st
 from PIL import Image
 from ultralytics import YOLO
+import matplotlib.pyplot as plt
+import numpy as np
 
 # Load the YOLO model
-model = YOLO('yolov8n.yaml')
-model = YOLO('best.pt')
+model = YOLO('yolov8n.pt')  # Initialize the YOLO model
+model.train(data='data.yaml', epochs=50, imgsz=640)  # Train the model
 
 # Application title and description
 st.title("Tomato Leaf Disease Detection")
@@ -16,18 +18,19 @@ Bacterial Spot, Early Blight, Healthy, Iron Deficiency, Late Blight, Leaf Mold, 
 # File uploader for tomato leaf images
 uploaded_file = st.file_uploader("Choose a tomato leaf image", type=["jpg", "png"])
 
-
 # Process the uploaded image
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
+    image_array = np.array(image)
 
     # Predict classes
-    results = model(image)
-    # View results
+    results = model(image_array)
+    
+    # Save and display the results
     for r in results:
         im_array = r.plot()  # plot a BGR numpy array of predictions
-        im = Image.fromarray(im_array[..., ::-1])  # RGB PIL image
-        im.save('results.jpg')  # save image
+        im = Image.fromarray(im_array[..., ::-1])  # Convert to RGB PIL image
+        im.save('results.jpg')  # Save the image
     
     st.image('results.jpg', caption='Model Prediction')
 

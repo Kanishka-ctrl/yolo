@@ -70,24 +70,29 @@ if uploaded_file is not None:
     image_array = np.array(image)
 
     # Predict classes
-    results = model(image_array)
+    results = model.predict(image_array, save=True)  # Ensure the prediction is made and saved
     
-    # Save and display the results
-    for r in results:
-        im_array = r.plot()  # plot a BGR numpy array of predictions
-        im = Image.fromarray(im_array[..., ::-1])  # Convert to RGB PIL image
-        im.save('results.jpg')  # Save the image
-    
-    st.image('results.jpg', caption='Model Prediction')
-
-    # Display disease information
-    detected_classes = set([d['name'] for d in results])
-    st.write("### Disease Information and Remedies:")
-    for disease in detected_classes:
-        if disease in disease_info:
-            st.write(f"**{disease}**")
-            st.write(f"*Description:* {disease_info[disease]['description']}")
-            st.write(f"*Remedy:* {disease_info[disease]['remedy']}")
+    # Check if any results are found
+    if results:
+        # Save and display the results
+        for r in results:
+            im_array = r.plot()  # plot a BGR numpy array of predictions
+            im = Image.fromarray(im_array[..., ::-1])  # Convert to RGB PIL image
+            im.save('results.jpg')  # Save the image
+        
+        st.image('results.jpg', caption='Model Prediction')
+        
+        # Extract detected classes
+        detected_classes = set([box.cls for box in r.boxes])
+        st.write("### Disease Information and Remedies:")
+        for disease in detected_classes:
+            disease_name = r.names[disease]
+            if disease_name in disease_info:
+                st.write(f"**{disease_name}**")
+                st.write(f"*Description:* {disease_info[disease_name]['description']}")
+                st.write(f"*Remedy:* {disease_info[disease_name]['remedy']}")
+    else:
+        st.write("No diseases detected in the image.")
 
 # Custom CSS for a polished look
 st.markdown(

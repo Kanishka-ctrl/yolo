@@ -4,7 +4,7 @@ from ultralytics import YOLO
 import numpy as np
 
 # Load the pre-trained YOLO model
-model = YOLO('best.pt')  # Load the trained model weights
+model = YOLO('model.pt')  # Load the trained model weights
 
 # Application title and description
 st.title("Tomato Leaf Disease Detection")
@@ -83,14 +83,18 @@ if uploaded_file is not None:
         st.image('results.jpg', caption='Model Prediction')
         
         # Extract detected classes
-        detected_classes = set([box.cls for box in r.boxes])
+        detected_classes = set([model.names[int(box.cls)] for r in results for box in r.boxes])
         st.write("### Disease Information and Remedies:")
-        for disease in detected_classes:
-            disease_name = r.names[disease]
-            if disease_name in disease_info:
-                st.write(f"**{disease_name}**")
-                st.write(f"*Description:* {disease_info[disease_name]['description']}")
-                st.write(f"*Remedy:* {disease_info[disease_name]['remedy']}")
+        if "Healthy" in detected_classes:
+            st.write("**Healthy**")
+            st.write(f"*Description:* {disease_info['Healthy']['description']}")
+            st.write(f"*Remedy:* {disease_info['Healthy']['remedy']}")
+        else:
+            for disease in detected_classes:
+                if disease in disease_info:
+                    st.write(f"**{disease}**")
+                    st.write(f"*Description:* {disease_info[disease]['description']}")
+                    st.write(f"*Remedy:* {disease_info[disease]['remedy']}")
     else:
         st.write("No diseases detected in the image.")
 
